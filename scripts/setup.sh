@@ -51,6 +51,22 @@ check_system_requirements() {
             warning "This script is designed for Ubuntu. Your system: $ID"
         fi
         info "Operating System: $PRETTY_NAME"
+        
+        # Check if Ubuntu 24.04
+        if [[ "$VERSION_ID" == "24.04" ]]; then
+            info "Ubuntu 24.04 detected - using compatible configurations"
+        elif [[ "$VERSION_ID" < "22.04" ]]; then
+            error "Ubuntu 22.04 or later required. Current: $VERSION_ID"
+            exit 1
+        fi
+    fi
+    
+    # Check kernel version (6.x kernels need special handling)
+    kernel_version=$(uname -r | cut -d. -f1)
+    if [[ "$kernel_version" -ge 6 ]]; then
+        info "Kernel 6.x detected - applying compatibility settings"
+        # Set up compatibility for newer kernels
+        export UHD_RFNOC_DIR=/usr/local/lib/uhd/rfnoc
     fi
     
     # Check available memory (minimum 4GB recommended)
@@ -68,6 +84,25 @@ check_system_requirements() {
         warning "Low disk space: ${available_gb}GB available. Minimum 10GB recommended."
     else
         info "Disk space: ${available_gb}GB available"
+    fi
+    
+    # Check Docker version
+    if command -v docker &> /dev/null; then
+        docker_version=$(docker --version | grep -oP '\d+\.\d+')
+        info "Docker version: $docker_version"
+        
+        # Check if Docker Compose v2 is available
+        if docker compose version &> /dev/null; then
+            info "Docker Compose v2 detected"
+        elif docker-compose --version &> /dev/null; then
+            warning "Docker Compose v1 detected. v2 recommended."
+        else
+            error "Docker Compose not found. Please install Docker Compose."
+            exit 1
+        fi
+    else
+        error "Docker not found. Please install Docker first."
+        exit 1
     fi
 }
 
@@ -93,20 +128,27 @@ setup_directories() {
 setup_usb_permissions() {
     log "Setting up USB permissions for SDR..."
     
-    # Create udev rules for Ettus devices
+    # Create udev rules for Ettus devices (updated for Ubuntu 24.04)
     if [[ $EUID -eq 0 ]]; then
         cat > /etc/udev/rules.d/10-ettus.rules << 'EOF'
-# Ettus Research USRP devices
+# Ettus Research USRP devices - Updated for Ubuntu 24.04
 SUBSYSTEM=="usb", ATTR{idVendor}=="fffe", ATTR{idProduct}=="0002", MODE="0666", GROUP="usrp"
 SUBSYSTEM=="usb", ATTR{idVendor}=="2500", ATTR{idProduct}=="0002", MODE="0666", GROUP="usrp"
 SUBSYSTEM=="usb", ATTR{idVendor}=="3923", ATTR{idProduct}=="7813", MODE="0666", GROUP="usrp"
 SUBSYSTEM=="usb", ATTR{idVendor}=="3923", ATTR{idProduct}=="7814", MODE="0666", GROUP="usrp"
+# B200/B210 specific
+SUBSYSTEM=="usb", ATTR{idVendor}=="2500", ATTR{idProduct}=="0020", MODE="0666", GROUP="usrp"
+SUBSYSTEM=="usb", ATTR{idVendor}=="2500", ATTR{idProduct}=="0021", MODE="0666", GROUP="usrp"
 EOF
         
         # Create usrp group
         groupadd -f usrp
         
-        # Add lteuser to usrp group
+        # Add current user and lteuser to usrp group
+        if [ -n "$SUDO_USER" ]; then
+            usermod -a -G usrp "$SUDO_USER"
+            info "Added $SUDO_USER to usrp group"
+        fi
         usermod -a -G usrp lteuser 2>/dev/null || true
         
         # Reload udev rules

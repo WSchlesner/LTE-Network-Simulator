@@ -64,7 +64,7 @@ The authors are not responsible for any misuse of this software.
 
 ## 🚀 **Quick Start (Ubuntu 24.04)**
 
-### 1. Clone and Setup
+### 1. Clone and Verify Setup
 
 ```bash
 # Clone the repository
@@ -74,11 +74,30 @@ cd lte-network-simulator
 # Make launcher executable
 chmod +x run.sh
 
-# Run initial setup (requires sudo)
+# Verify your system is ready (NEW!)
+./run.sh verify
+```
+
+The verify command will check:
+- ✅ Operating System compatibility
+- ✅ Kernel version
+- ✅ Docker installation and permissions
+- ✅ Docker Compose availability
+- ✅ Ettus B210 SDR detection
+- ✅ USB permissions and udev rules
+- ✅ System resources (RAM, disk, CPU)
+- ✅ Required project files
+- ✅ Network configuration
+- ✅ Python environment
+
+### 2. Setup (if verification fails)
+
+```bash
+# If verification fails, run setup to fix issues
 sudo ./run.sh setup
 ```
 
-### 2. Connect Hardware
+### 3. Connect Hardware
 
 ```bash
 # Connect your Ettus B210 SDR via USB 3.0
@@ -88,48 +107,61 @@ lsusb | grep -i ettus
 # Should show: Bus XXX Device XXX: ID 2500:0020 Ettus Research LLC USRP B200
 ```
 
-### 3. Build Container
+### 4. Build and Start
 
 ```bash
 # Build the LTE simulator container
 sudo ./run.sh build
-```
 
-### 4. Start the System
-
-**Option A: Interactive Mode (Recommended)**
-```bash
-# Start with full interactive TUI
+# Start the system with interactive TUI
 sudo ./run.sh up
 ```
 
-**Option B: Background Mode**
-```bash
-# Start in background
-sudo ./run.sh background
-
-# View logs
-sudo ./run.sh logs
-```
-
-**Option C: Interactive Container Access**
-```bash
-# Run with container shell access
-sudo ./run.sh interactive
-```
-
-### 5. Quick Commands Summary
+### 5. Complete Command Reference
 
 ```bash
-# Essential commands for your workflow:
-sudo ./run.sh build         # Build container
-sudo ./run.sh up           # Start system (TUI interface)
-sudo ./run.sh down         # Stop system
-sudo ./run.sh status       # Check status
-sudo ./run.sh logs         # View logs
+# System verification and setup
+./run.sh verify           # Check if system is ready ⭐ NEW!
+sudo ./run.sh setup       # Fix configuration issues
+
+# Container management
+sudo ./run.sh build       # Build container
+sudo ./run.sh up          # Start system (TUI interface)
+sudo ./run.sh background  # Start in background
+sudo ./run.sh interactive # Run with container shell access
+sudo ./run.sh down        # Stop system
+
+# Monitoring and maintenance
+sudo ./run.sh status      # Check status
+sudo ./run.sh logs        # View logs
+sudo ./run.sh clean       # Clean up containers
+
+# Help
+./run.sh help            # Show detailed usage
 ```
 
-### 4. Configure Network
+### 6. First-Time Setup Workflow
+
+```bash
+# Complete first-time setup workflow:
+
+# 1. Verify system readiness
+./run.sh verify
+
+# 2. If verification fails, run setup
+sudo ./run.sh setup
+
+# 3. Verify again to ensure all issues are resolved
+./run.sh verify
+
+# 4. Build the container
+sudo ./run.sh build
+
+# 5. Start the system
+sudo ./run.sh up
+```
+
+### 7. Configure Network
 
 1. **Select Operator**: Choose from Cambodia Smart, Cellcard, Metfone, etc.
 2. **Load Cell Data**: Automatically populate Cell ID and LAC
@@ -137,12 +169,43 @@ sudo ./run.sh logs         # View logs
 4. **Generate Config**: Create complete network configuration
 5. **Start Network**: Launch the LTE network
 
-### 5. Add Subscribers
+### 8. Add Subscribers
 
 1. **Navigate to Subscribers Tab**
 2. **Add IMSI/Ki/OPc**: Either manually or generate random
 3. **Authenticate**: Test subscriber authentication
 4. **Monitor**: Watch real-time connection status
+
+---
+
+## 🔧 **System Verification Details**
+
+The new `./run.sh verify` command performs comprehensive checks:
+
+### ✅ **Critical Checks** (Must Pass)
+- **Operating System**: Ubuntu 22.04+ required
+- **Docker Installation**: Proper Docker setup with running service
+- **Docker Compose**: Version 2.0+ availability
+- **Ettus B210 Detection**: Hardware presence via USB
+- **System Resources**: Minimum 4GB RAM, 10GB disk space
+- **Project Structure**: Required files and directories
+
+### ⚠️ **Warning Checks** (Should Address)
+- **USB 3.0 Connection**: B210 connected via USB 3.0 vs 2.0
+- **Memory**: 8GB+ recommended (minimum 4GB)
+- **USB Permissions**: User in usrp group
+- **UHD Tools**: Available in system PATH
+- **Network Ports**: No conflicting services
+
+### 🔧 **Automatic Fixes Available**
+
+If verification fails, `./run.sh setup` can automatically fix:
+- Install Docker and Docker Compose
+- Create required directories
+- Set up USB permissions and udev rules
+- Configure system optimization settings
+- Create default configuration files
+- Set up systemd services
 
 ---
 
@@ -153,6 +216,7 @@ lte-network-simulator/
 ├── Dockerfile                 # Main container definition
 ├── docker-compose.yml         # Multi-service orchestration
 ├── README.md                  # This documentation
+├── run.sh                     # Enhanced launcher with verify ⭐ NEW!
 ├── scripts/                   # Setup and utility scripts
 │   ├── setup.sh              # System setup and configuration
 │   ├── start-tui.sh           # TUI launcher
@@ -285,6 +349,57 @@ imsi,ki,opc,operator,notes
 
 ## 🚀 **Advanced Usage**
 
+### System Verification and Troubleshooting
+
+#### Using the Verify Command
+```bash
+# Run comprehensive system check
+./run.sh verify
+
+# Example output for healthy system:
+# ✓ Ubuntu 24.04 LTS detected
+# ✓ Kernel 6.5.0 (6.x compatible)
+# ✓ Docker 24.0.6 installed
+# ✓ Docker service is running
+# ✓ Docker permissions configured
+# ✓ Docker Compose v2.21.0 available
+# ✓ Ettus B210 SDR detected
+# ✓ USB 3.0 connection detected
+# ✓ Memory: 16GB (recommended: 8GB+)
+# ✓ System is ready for LTE Network Simulator!
+```
+
+#### Common Verification Failures and Solutions
+
+**Docker Not Found**
+```bash
+# Solution: Install Docker
+curl -fsSL https://get.docker.com | sh
+sudo usermod -aG docker $USER
+newgrp docker
+```
+
+**Ettus B210 Not Detected**
+```bash
+# Check USB connection
+lsusb | grep -i ettus
+
+# Ensure USB 3.0 connection
+lsusb -t | grep -A 10 "ettus"
+
+# Check cable and power
+```
+
+**Permission Issues**
+```bash
+# Fix Docker permissions
+sudo usermod -aG docker $USER
+newgrp docker
+
+# Fix USB permissions
+sudo ./run.sh setup
+```
+
 ### Custom Operator Configuration
 
 To add a new operator:
@@ -349,7 +464,27 @@ grep "authentication" logs/epc.log
 
 ## 🔍 **Troubleshooting**
 
+### Verification-Based Troubleshooting
+
+Start with system verification:
+```bash
+./run.sh verify
+```
+
+This will identify issues and provide specific solutions for each problem.
+
 ### Common Issues
+
+#### System Verification Fails
+```bash
+# If critical issues found:
+sudo ./run.sh setup
+
+# Then verify again:
+./run.sh verify
+
+# Address remaining warnings as needed
+```
 
 #### SDR Not Detected
 ```bash
@@ -391,9 +526,8 @@ cat config/user_db.csv
 
 #### Performance Issues
 ```bash
-# Check system resources
-htop
-df -h
+# Check system resources using verify
+./run.sh verify
 
 # Monitor USB performance
 dmesg | grep -i usb
@@ -439,6 +573,16 @@ sudo modprobe usbcore
 
 # Check for hardware issues
 uhd_usrp_probe --args "type=b200"
+```
+
+#### Complete System Reset
+```bash
+# Clean everything and start fresh
+sudo ./run.sh clean
+sudo ./run.sh setup
+./run.sh verify
+sudo ./run.sh build
+sudo ./run.sh up
 ```
 
 ---
@@ -563,7 +707,16 @@ matches = await cell_db.search_cells(operator="Smart")
 
 ### System Testing
 
-#### 1. SDR Functionality Test
+#### 1. Complete System Verification
+```bash
+# Comprehensive system check
+./run.sh verify
+
+# Expected output should show all green checkmarks
+# Address any warnings or critical issues
+```
+
+#### 2. SDR Functionality Test
 ```bash
 # Run comprehensive SDR test
 ./scripts/test-sdr.sh
@@ -577,7 +730,7 @@ matches = await cell_db.search_cells(operator="Smart")
 # - Gain control: PASS
 ```
 
-#### 2. Network Stack Test
+#### 3. Network Stack Test
 ```bash
 # Start network components
 ./scripts/start-network.sh
@@ -592,7 +745,7 @@ ip addr show
 netstat -tulpn | grep 36412
 ```
 
-#### 3. Subscriber Authentication Test
+#### 4. Subscriber Authentication Test
 ```python
 # Use TUI or API to test authentication
 # Add test subscriber
@@ -628,6 +781,9 @@ netstat -tulpn | grep 36412
 git clone <repository-url>
 cd lte-network-simulator
 
+# Verify development environment
+./run.sh verify
+
 # Create development environment
 python3 -m venv venv
 source venv/bin/activate
@@ -650,9 +806,10 @@ pre-commit install
 
 1. **Fork the repository**
 2. **Create feature branch**: `git checkout -b feature/new-feature`
-3. **Write tests** for new functionality
-4. **Update documentation** as needed
-5. **Submit pull request** with detailed description
+3. **Verify system**: `./run.sh verify`
+4. **Write tests** for new functionality
+5. **Update documentation** as needed
+6. **Submit pull request** with detailed description
 
 ---
 
@@ -703,6 +860,13 @@ For commercial support, custom development, or consulting services, please conta
 
 ## 📋 **Changelog**
 
+### Version 1.1.0 ⭐ NEW!
+- **Added comprehensive system verification**: `./run.sh verify`
+- **Enhanced setup automation**: Better error handling and fixes
+- **Improved user experience**: Clear status indicators and help
+- **Better troubleshooting**: Specific solutions for common issues
+- **Enhanced documentation**: Step-by-step verification workflow
+
 ### Version 1.0.0
 - Initial release
 - Complete LTE network simulation
@@ -721,3 +885,21 @@ For commercial support, custom development, or consulting services, please conta
 ---
 
 **Remember: This system is for testing and research only. Always use in controlled, shielded environments and comply with local regulations.**
+
+## 🚀 **Quick Reference Card**
+
+```bash
+# Essential workflow for new users:
+./run.sh verify          # ✅ Check system readiness
+sudo ./run.sh setup      # 🔧 Fix any issues found
+./run.sh verify          # ✅ Verify fixes worked
+sudo ./run.sh build      # 🏗️  Build container
+sudo ./run.sh up         # 🚀 Start system
+
+# Daily operations:
+sudo ./run.sh up         # Start system
+sudo ./run.sh background # Start in background  
+sudo ./run.sh down       # Stop system
+sudo ./run.sh logs       # View logs
+sudo ./run.sh status     # Check status
+```

@@ -201,30 +201,6 @@ setup_network() {
     fi
 }
 
-# Install additional Python packages
-install_python_packages() {
-    log "Installing additional Python packages..."
-    
-    # List of additional packages that might be needed
-    additional_packages=(
-        "numpy"
-        "scipy" 
-        "matplotlib"
-        "pandas"
-        "cryptography"
-        "psutil"
-    )
-    
-    for package in "${additional_packages[@]}"; do
-        if python3 -c "import $package" 2>/dev/null; then
-            info "$package already installed"
-        else
-            info "Installing $package..."
-            pip3 install "$package" --user || warning "Failed to install $package"
-        fi
-    done
-}
-
 # Create default configuration files
 create_default_configs() {
     log "Creating default configuration files..."
@@ -604,7 +580,6 @@ main() {
     setup_usb_permissions
     check_sdr
     setup_network
-    install_python_packages
     create_default_configs
     create_startup_scripts
     create_systemd_services

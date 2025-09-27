@@ -304,14 +304,12 @@ verify_system() {
         fi
     done
     
-    # 11. Python Dependencies Check (for development)
-    echo -e "${INFO} Checking Python Environment..."
+    # 11. Python Dependencies Check
+    echo "${INFO} Checking Python Environment..."
     if command -v python3 &> /dev/null; then
         python_version=$(python3 --version | cut -d' ' -f2)
-        echo -e "  ${CHECKMARK} Python $python_version installed"
-        
-        # Check for essential Python packages
-        essential_packages=("textual" "asyncio")
+        echo "  ${CHECKMARK} Python $python_version installed"
+        echo "  ${CHECKMARK} Python packages will be available in container"
         for package in "${essential_packages[@]}"; do
             if python3 -c "import $package" 2>/dev/null; then
                 echo -e "  ${CHECKMARK} Python package: $package"

@@ -78,18 +78,21 @@ RUN cd /tmp && \
     ldconfig && \
     rm -rf /tmp/uhd
 
-# Download and build srsRAN (latest stable version)
+# Download and build srsRAN (with Ubuntu 24.04 compatibility fixes)
 RUN cd /tmp && \
     git clone https://github.com/srsran/srsRAN_4G.git && \
     cd srsRAN_4G && \
     git checkout release_23_11 && \
     mkdir build && \
     cd build && \
+    # Configure with Ubuntu 24.04 compatibility fixes
     cmake -DCMAKE_INSTALL_PREFIX=/usr/local \
           -DENABLE_ZEROMQ=ON \
           -DENABLE_SRSUE=ON \
           -DENABLE_SRSENB=ON \
-          -DENABLE_SRSEPC=ON .. && \
+          -DENABLE_SRSEPC=ON \
+          -DCMAKE_CXX_FLAGS="-Wno-error=array-bounds -Wno-array-bounds" \
+          -DCMAKE_C_FLAGS="-Wno-error=array-bounds -Wno-array-bounds" .. && \
     make -j$(nproc) && \
     make install && \
     ldconfig && \

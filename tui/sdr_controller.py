@@ -527,3 +527,76 @@ class SDRController:
                 os.remove("/tmp/gain_test.bin")
             except:
                 pass
+                ######################
+            return True
+            
+        except Exception as e:
+            logger.error(f"Gain control test failed: {e}")
+        return False
+
+    async def configure(self, config: Dict[str, Any]) -> bool:
+        """
+        Configure the SDR with given parameters
+        
+        Args:
+            config: Configuration dictionary
+            
+        Returns:
+            True if configuration successful, False otherwise
+        """
+        
+        try:
+            if not self.is_connected:
+                logger.error("SDR not connected")
+                return False
+            
+            # Update current configuration
+            self.current_config.update(config)
+            
+            logger.info(f"SDR configured with: {config}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to configure SDR: {e}")
+            return False
+
+    async def get_status(self) -> Dict[str, Any]:
+        """
+        Get current SDR status
+        
+        Returns:
+            Dictionary with SDR status information
+        """
+        
+        try:
+            return {
+                "is_connected": self.is_connected,
+                "device_serial": self.device_serial,
+                "device_args": self.device_args,
+                "current_config": self.current_config,
+                "connection_time": getattr(self, 'connection_time', None)
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to get SDR status: {e}")
+            return {"error": str(e)}
+
+    async def disconnect(self) -> bool:
+        """
+        Disconnect from the SDR device
+        
+        Returns:
+            True if disconnection successful, False otherwise
+        """
+        
+        try:
+            self.is_connected = False
+            self.device_serial = None
+            self.current_config = {}
+            
+            logger.info("Disconnected from SDR")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to disconnect from SDR: {e}")
+            return False

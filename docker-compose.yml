@@ -1,0 +1,60 @@
+# Docker Compose configuration for LTE Network Simulator
+# Provides containerized LTE network with SDR support
+services:
+  # Main LTE simulator service
+  lte-simulator:
+    build: .
+    container_name: lte-network-sim
+    privileged: true  # Required for SDR access and network configuration
+    network_mode: host  # Required for proper cellular network simulation
+    volumes:
+      # Mount USB devices for SDR access
+      - /dev/bus/usb:/dev/bus/usb
+      # Persistent storage for configurations and logs
+      - ./data:/opt/lte-simulator/data
+      - ./logs:/opt/lte-simulator/logs
+      - ./config:/opt/lte-simulator/config
+    devices:
+      # Mount all USB devices (for SDR detection)
+      - /dev/bus/usb:/dev/bus/usb
+    environment:
+      # UHD environment variables
+      - UHD_IMAGES_DIR=/usr/local/share/uhd/images
+      - UHD_PKG_PATH=/usr/local/lib/uhd
+      # Application environment
+      - PYTHONPATH=/opt/lte-simulator/tui
+      - LOG_LEVEL=INFO
+      # Fix for Ubuntu 24.04 Python warnings
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+    # Override default command to start TUI directly
+    command: ["python3", "/opt/lte-simulator/tui/main.py"]
+    
+  # Optional: Web interface for remote management
+  web-interface:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    container_name: lte-web-interface
+    ports:
+      - "8080:8080"
+    depends_on:
+      - lte-simulator
+    volumes:
+      - ./data:/opt/lte-simulator/data:ro
+      - ./logs:/opt/lte-simulator/logs:ro
+    environment:
+      - FLASK_ENV=production
+    restart: unless-stopped
+    profiles:
+      - web  # Only start if 'web' profile is specified
+
+volumes:
+  # Persistent volumes for data storage
+  lte_data:
+    driver: local
+  lte_logs:
+    driver: local

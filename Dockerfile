@@ -118,15 +118,15 @@ ENV UHD_IMAGES_DIR="/usr/local/share/uhd/images"
 ENV LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH"
 ENV UHD_RFNOC_DIR="/usr/local/lib/uhd/rfnoc"
 
+# Download UHD images as root before switching users
+RUN /usr/local/lib/uhd/utils/uhd_images_downloader.py
+
 # Create non-root user for security
 RUN useradd -m -s /bin/bash lteuser && \
     chown -R lteuser:lteuser /opt/lte-simulator
 
 # Switch to non-root user
 USER lteuser
-
-# Download UHD images
-RUN /usr/local/lib/uhd/utils/uhd_images_downloader.py
 
 # Expose ports for LTE services
 EXPOSE 36412/sctp 36422/sctp 2152/udp

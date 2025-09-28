@@ -30,11 +30,13 @@ services:
     stdin_open: true
     tty: true
     restart: unless-stopped
-    # Simplified entrypoint that works with volume permissions
+    # Fixed entrypoint with proper permission handling
     entrypoint: |
       bash -c "
-        # Create required files as lteuser (the container already sets proper ownership)
-        # No need to change ownership of mounted volumes
+        # Ensure the lteuser owns the volume mount points
+        sudo chown -R lteuser:lteuser /opt/lte-simulator/data /opt/lte-simulator/logs /opt/lte-simulator/config
+        
+        # Create required files with proper ownership
         touch /opt/lte-simulator/config/user_db.csv || true
         touch /opt/lte-simulator/data/subscribers.csv || true
         touch /opt/lte-simulator/logs/tui.log || true
@@ -49,9 +51,8 @@ services:
         fi
         
         # Start TUI as lteuser
-        exec python3 /opt/lte-simulator/tui/main.py
+        exec sudo -u lteuser python3 /opt/lte-simulator/tui/main.py
       "
-    user: lteuser  # Run as lteuser from the start
     
   # Optional: Web interface for remote management
   web-interface:

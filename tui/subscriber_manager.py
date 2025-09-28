@@ -43,10 +43,16 @@ class SubscriberManager:
         self.config_dir.mkdir(exist_ok=True)
         self.data_dir.mkdir(exist_ok=True)
         
-        # Initialize database files
-        asyncio.create_task(self._init_databases())
+        # Initialize flag to track if databases are initialized
+        self._initialized = False
         
         logger.info("SubscriberManager initialized")
+
+    async def ensure_initialized(self) -> None:
+        """Ensure databases are initialized (call this before using other methods)"""
+        if not self._initialized:
+            await self._init_databases()
+            self._initialized = True
 
     async def _init_databases(self) -> None:
         """Initialize subscriber database files"""
@@ -110,6 +116,8 @@ class SubscriberManager:
         """
         
         try:
+            await self.ensure_initialized()
+            
             # Validate input parameters
             if not self._validate_subscriber_data(imsi, ki, opc):
                 return False
@@ -224,6 +232,8 @@ class SubscriberManager:
         """
         
         try:
+            await self.ensure_initialized()
+            
             if imsi not in self.subscribers:
                 logger.warning(f"Subscriber {imsi} not found")
                 return False
@@ -298,6 +308,7 @@ class SubscriberManager:
             Subscriber dictionary or None if not found
         """
         
+        await self.ensure_initialized()
         return self.subscribers.get(imsi)
 
     async def get_all_subscribers(self) -> List[Dict[str, Any]]:
@@ -308,6 +319,7 @@ class SubscriberManager:
             List of all subscriber dictionaries
         """
         
+        await self.ensure_initialized()
         return list(self.subscribers.values())
 
     async def update_subscriber_status(self, imsi: str, status: str, 
@@ -325,6 +337,8 @@ class SubscriberManager:
         """
         
         try:
+            await self.ensure_initialized()
+            
             if imsi not in self.subscribers:
                 logger.warning(f"Subscriber {imsi} not found")
                 return False
@@ -358,6 +372,8 @@ class SubscriberManager:
         """
         
         try:
+            await self.ensure_initialized()
+            
             # Generate random IMSI
             imsi = self._generate_random_imsi(mcc, mnc)
             
@@ -417,6 +433,7 @@ class SubscriberManager:
         """
         
         try:
+            await self.ensure_initialized()
             generated = []
             
             for i in range(count):
@@ -454,6 +471,7 @@ class SubscriberManager:
         """
         
         try:
+            await self.ensure_initialized()
             successful = 0
             failed = 0
             
@@ -498,6 +516,8 @@ class SubscriberManager:
         """
         
         try:
+            await self.ensure_initialized()
+            
             with open(csv_file_path, 'w', newline='') as f:
                 fieldnames = [
                     'imsi', 'ki', 'opc', 'amf', 'sqn', 'status',
@@ -590,6 +610,8 @@ class SubscriberManager:
         """
         
         try:
+            await self.ensure_initialized()
+            
             if imsi not in self.subscribers:
                 logger.warning(f"Authentication failed: subscriber {imsi} not found")
                 return None
@@ -632,6 +654,8 @@ class SubscriberManager:
         """
         
         try:
+            await self.ensure_initialized()
+            
             total = len(self.subscribers)
             active = sum(1 for s in self.subscribers.values() if s['status'] == 'active')
             inactive = sum(1 for s in self.subscribers.values() if s['status'] == 'inactive')
@@ -668,6 +692,8 @@ class SubscriberManager:
         """
         
         try:
+            await self.ensure_initialized()
+            
             query_lower = query.lower()
             matches = []
             
@@ -697,6 +723,8 @@ class SubscriberManager:
         """
         
         try:
+            await self.ensure_initialized()
+            
             import shutil
             import datetime
             
@@ -722,6 +750,8 @@ class SubscriberManager:
         """
         
         try:
+            await self.ensure_initialized()
+            
             issues = []
             
             for imsi, subscriber in self.subscribers.items():

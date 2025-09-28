@@ -1,5 +1,7 @@
 # Docker Compose configuration for LTE Network Simulator
-# Provides containerized LTE network with SDR support
+# Fixed version with proper permissions
+version: '3.8'
+
 services:
   # Main LTE simulator service
   lte-simulator:
@@ -30,8 +32,26 @@ services:
     stdin_open: true
     tty: true
     restart: unless-stopped
-    # Override default command to start TUI directly
-    command: ["python3", "/opt/lte-simulator/tui/main.py"]
+    # Use entrypoint script to fix permissions and start TUI
+    entrypoint: |
+      bash -c "
+        # Fix permissions on startup
+        mkdir -p /opt/lte-simulator/{config,data,logs}
+        chown -R lteuser:lteuser /opt/lte-simulator/
+        chmod -R 755 /opt/lte-simulator/
+        chmod -R 766 /opt/lte-simulator/{config,data,logs}/
+        
+        # Create required files
+        touch /opt/lte-simulator/config/user_db.csv
+        touch /opt/lte-simulator/data/subscribers.csv
+        chown lteuser:lteuser /opt/lte-simulator/config/user_db.csv
+        chown lteuser:lteuser /opt/lte-simulator/data/subscribers.csv
+        chmod 666 /opt/lte-simulator/config/user_db.csv
+        chmod 666 /opt/lte-simulator/data/subscribers.csv
+        
+        # Switch to lteuser and start TUI
+        exec su - lteuser -c 'cd /opt/lte-simulator && python3 /opt/lte-simulator/tui/main.py'
+      "
     
   # Optional: Web interface for remote management
   web-interface:

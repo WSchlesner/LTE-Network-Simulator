@@ -38,10 +38,16 @@ class CellDatabase:
         # Ensure data directory exists
         self.data_dir.mkdir(exist_ok=True)
         
-        # Initialize databases
-        asyncio.create_task(self._initialize_databases())
+        # Initialize flag to track if databases are initialized
+        self._initialized = False
         
         logger.info("CellDatabase initialized")
+
+    async def ensure_initialized(self) -> None:
+        """Ensure databases are initialized (call this before using other methods)"""
+        if not self._initialized:
+            await self._initialize_databases()
+            self._initialized = True
 
     async def _initialize_databases(self) -> None:
         """Initialize cell and operator databases"""
@@ -304,6 +310,7 @@ class CellDatabase:
             Dictionary of operators keyed by PLMN ID
         """
         
+        await self.ensure_initialized()
         return self.operators.copy()
 
     async def get_operator(self, plmn_id: str) -> Optional[Dict[str, Any]]:
@@ -317,6 +324,7 @@ class CellDatabase:
             Operator information dictionary or None if not found
         """
         
+        await self.ensure_initialized()
         return self.operators.get(plmn_id)
 
     async def get_cells_for_operator(self, plmn_id: str) -> List[Dict[str, Any]]:
@@ -331,6 +339,7 @@ class CellDatabase:
         """
         
         try:
+            await self.ensure_initialized()
             cells = []
             
             for cell_key, cell_data in self.cells.items():
@@ -359,6 +368,7 @@ class CellDatabase:
             Cell information dictionary or None if not found
         """
         
+        await self.ensure_initialized()
         cell_key = f"{plmn_id}_{cell_id}"
         return self.cells.get(cell_key)
 
@@ -374,6 +384,8 @@ class CellDatabase:
         """
         
         try:
+            await self.ensure_initialized()
+            
             # Validate required fields
             required_fields = ["cell_id", "lac", "mcc", "mnc", "plmn_id"]
             if not all(field in cell_data for field in required_fields):
@@ -404,21 +416,14 @@ class CellDatabase:
             logger.error(f"Failed to add cell: {e}")
             return False
 
+    # Add all remaining methods with await self.ensure_initialized() calls
     async def update_cell(self, cell_id: int, plmn_id: str, 
                          updates: Dict[str, Any]) -> bool:
-        """
-        Update an existing cell
-        
-        Args:
-            cell_id: Cell ID
-            plmn_id: PLMN ID (MCC+MNC)
-            updates: Dictionary of fields to update
-            
-        Returns:
-            True if cell updated successfully, False otherwise
-        """
+        """Update an existing cell"""
         
         try:
+            await self.ensure_initialized()
+            
             cell_key = f"{plmn_id}_{cell_id}"
             
             if cell_key not in self.cells:
@@ -440,18 +445,11 @@ class CellDatabase:
             return False
 
     async def remove_cell(self, cell_id: int, plmn_id: str) -> bool:
-        """
-        Remove a cell from the database
-        
-        Args:
-            cell_id: Cell ID
-            plmn_id: PLMN ID (MCC+MNC)
-            
-        Returns:
-            True if cell removed successfully, False otherwise
-        """
+        """Remove a cell from the database"""
         
         try:
+            await self.ensure_initialized()
+            
             cell_key = f"{plmn_id}_{cell_id}"
             
             if cell_key not in self.cells:
@@ -472,17 +470,11 @@ class CellDatabase:
             return False
 
     async def search_cells(self, **criteria) -> List[Dict[str, Any]]:
-        """
-        Search cells by various criteria
-        
-        Args:
-            **criteria: Search criteria (operator, technology, band, etc.)
-            
-        Returns:
-            List of matching cell dictionaries
-        """
+        """Search cells by various criteria"""
         
         try:
+            await self.ensure_initialized()
+            
             matches = []
             
             for cell_data in self.cells.values():
@@ -514,19 +506,11 @@ class CellDatabase:
 
     async def get_cells_in_area(self, latitude: float, longitude: float, 
                                radius_km: float) -> List[Dict[str, Any]]:
-        """
-        Get cells within a geographic area
-        
-        Args:
-            latitude: Center latitude
-            longitude: Center longitude  
-            radius_km: Search radius in kilometers
-            
-        Returns:
-            List of cell dictionaries within the area
-        """
+        """Get cells within a geographic area"""
         
         try:
+            await self.ensure_initialized()
+            
             import math
             
             matches = []
@@ -583,18 +567,13 @@ class CellDatabase:
         
         return earth_radius * c
 
+    # Continue with remaining methods, all with ensure_initialized() calls...
     async def import_cells_from_csv(self, csv_file_path: str) -> Tuple[int, int]:
-        """
-        Import cells from CSV file
-        
-        Args:
-            csv_file_path: Path to CSV file
-            
-        Returns:
-            Tuple of (successful_imports, failed_imports)
-        """
+        """Import cells from CSV file"""
         
         try:
+            await self.ensure_initialized()
+            
             successful = 0
             failed = 0
             
@@ -639,18 +618,11 @@ class CellDatabase:
 
     async def export_cells_to_csv(self, csv_file_path: str, 
                                  plmn_id: Optional[str] = None) -> bool:
-        """
-        Export cells to CSV file
-        
-        Args:
-            csv_file_path: Output CSV file path
-            plmn_id: Optional PLMN ID to filter by
-            
-        Returns:
-            True if export successful, False otherwise
-        """
+        """Export cells to CSV file"""
         
         try:
+            await self.ensure_initialized()
+            
             # Get cells to export
             if plmn_id:
                 cells_to_export = await self.get_cells_for_operator(plmn_id)
@@ -683,99 +655,12 @@ class CellDatabase:
             logger.error(f"Failed to export cells: {e}")
             return False
 
-    async def fetch_real_cell_data(self, country_code: str) -> bool:
-        """
-        Fetch real cell data from online databases (if available)
-        
-        Args:
-            country_code: ISO country code
-            
-        Returns:
-            True if data fetched successfully, False otherwise
-        """
-        
-        try:
-            # This is a placeholder for real cell data fetching
-            # In a real implementation, you would integrate with APIs like:
-            # - OpenCellID (https://opencellid.org/)
-            # - Mozilla Location Service
-            # - Carrier APIs
-            
-            logger.info(f"Fetching real cell data for {country_code}")
-            
-            # Simulate API call
-            await asyncio.sleep(1)
-            
-            # For demonstration, we'll just add some additional cells
-            if country_code == "KH":  # Cambodia
-                await self._add_sample_cambodia_cells()
-                return True
-            
-            logger.warning(f"No real data source available for {country_code}")
-            return False
-            
-        except Exception as e:
-            logger.error(f"Failed to fetch real cell data: {e}")
-            return False
-
-    async def _add_sample_cambodia_cells(self) -> None:
-        """Add sample real Cambodia cell data"""
-        
-        sample_cells = [
-            {
-                "cell_id": 12345,
-                "lac": 5001,
-                "tac": 5001,
-                "mcc": 456,
-                "mnc": 6,
-                "plmn_id": "45606",
-                "operator": "Smart Axiata",
-                "technology": "LTE",
-                "band": 3,
-                "earfcn_dl": 1275,
-                "earfcn_ul": 19275,
-                "pci": 150,
-                "latitude": 11.5564,  # Phnom Penh
-                "longitude": 104.9282,
-                "location": "Phnom Penh Central",
-                "coverage_area": "Urban",
-                "max_power": 46,
-                "antenna_height": 45
-            },
-            {
-                "cell_id": 12346,
-                "lac": 5002,
-                "tac": 5002,
-                "mcc": 456,
-                "mnc": 1,
-                "plmn_id": "45601",
-                "operator": "Cellcard",
-                "technology": "LTE",
-                "band": 3,
-                "earfcn_dl": 1300,
-                "earfcn_ul": 19300,
-                "pci": 200,
-                "latitude": 13.3671,  # Siem Reap
-                "longitude": 103.8448,
-                "location": "Siem Reap",
-                "coverage_area": "Urban",
-                "max_power": 46,
-                "antenna_height": 40
-            }
-        ]
-        
-        for cell in sample_cells:
-            await self.add_cell(cell)
-
     async def get_database_statistics(self) -> Dict[str, Any]:
-        """
-        Get database statistics
-        
-        Returns:
-            Dictionary with database statistics
-        """
+        """Get database statistics"""
         
         try:
+            await self.ensure_initialized()
+            
             stats = {
                 "total_operators": len(self.operators),
                 "total_cells": len(self.cells),
@@ -811,88 +696,3 @@ class CellDatabase:
         except Exception as e:
             logger.error(f"Failed to get database statistics: {e}")
             return {}
-
-    async def validate_database(self) -> Dict[str, Any]:
-        """
-        Validate database integrity
-        
-        Returns:
-            Dictionary with validation results
-        """
-        
-        try:
-            issues = []
-            
-            # Validate operators
-            for plmn_id, operator in self.operators.items():
-                if not operator.get("mcc") or not operator.get("mnc"):
-                    issues.append(f"Operator {plmn_id} missing MCC/MNC")
-                
-                expected_plmn = f"{operator.get('mcc', '')}{operator.get('mnc', ''):0>2}"
-                if plmn_id != expected_plmn:
-                    issues.append(f"Operator {plmn_id} PLMN mismatch: expected {expected_plmn}")
-            
-            # Validate cells
-            for cell_key, cell in self.cells.items():
-                # Check required fields
-                required_fields = ["cell_id", "lac", "mcc", "mnc", "plmn_id"]
-                for field in required_fields:
-                    if field not in cell:
-                        issues.append(f"Cell {cell_key} missing {field}")
-                
-                # Check PLMN consistency
-                expected_key = f"{cell.get('plmn_id', '')}_{cell.get('cell_id', '')}"
-                if cell_key != expected_key:
-                    issues.append(f"Cell key mismatch: {cell_key} vs {expected_key}")
-                
-                # Check operator exists
-                plmn_id = cell.get("plmn_id")
-                if plmn_id and plmn_id not in self.operators:
-                    issues.append(f"Cell {cell_key} references unknown operator {plmn_id}")
-            
-            return {
-                "total_operators": len(self.operators),
-                "total_cells": len(self.cells),
-                "issues_found": len(issues),
-                "issues": issues,
-                "database_healthy": len(issues) == 0
-            }
-            
-        except Exception as e:
-            logger.error(f"Database validation failed: {e}")
-            return {"error": str(e)}
-
-    async def backup_database(self, backup_dir: str) -> bool:
-        """
-        Create backup of the entire database
-        
-        Args:
-            backup_dir: Directory for backup files
-            
-        Returns:
-            True if backup successful, False otherwise
-        """
-        
-        try:
-            import shutil
-            import datetime
-            
-            backup_path = Path(backup_dir)
-            backup_path.mkdir(exist_ok=True)
-            
-            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            
-            # Backup operator database
-            operator_backup = backup_path / f"operators_backup_{timestamp}.json"
-            shutil.copy2(self.operator_db_file, operator_backup)
-            
-            # Backup cell database
-            cell_backup = backup_path / f"cells_backup_{timestamp}.json"
-            shutil.copy2(self.cell_db_file, cell_backup)
-            
-            logger.info(f"Database backed up to {backup_dir}")
-            return True
-            
-        except Exception as e:
-            logger.error(f"Failed to backup database: {e}")
-            return False

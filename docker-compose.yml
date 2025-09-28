@@ -1,7 +1,5 @@
 # Docker Compose configuration for LTE Network Simulator
-# Fixed version with proper permissions
-version: '3.8'
-
+# Fixed version with proper volume permissions
 services:
   # Main LTE simulator service
   lte-simulator:
@@ -12,10 +10,10 @@ services:
     volumes:
       # Mount USB devices for SDR access
       - /dev/bus/usb:/dev/bus/usb
-      # Persistent storage for configurations and logs with proper permissions
-      - ./data:/opt/lte-simulator/data:rw
-      - ./logs:/opt/lte-simulator/logs:rw
-      - ./config:/opt/lte-simulator/config:rw
+      # Use named volumes instead of bind mounts to avoid permission issues
+      - lte_data:/opt/lte-simulator/data:rw
+      - lte_logs:/opt/lte-simulator/logs:rw
+      - lte_config:/opt/lte-simulator/config:rw
     devices:
       # Mount all USB devices (for SDR detection)
       - /dev/bus/usb:/dev/bus/usb
@@ -32,26 +30,28 @@ services:
     stdin_open: true
     tty: true
     restart: unless-stopped
-    # Use entrypoint script to fix permissions and start TUI
+    # Simplified entrypoint that works with volume permissions
     entrypoint: |
       bash -c "
-        # Fix permissions on startup
-        mkdir -p /opt/lte-simulator/{config,data,logs}
-        chown -R lteuser:lteuser /opt/lte-simulator/
-        chmod -R 755 /opt/lte-simulator/
-        chmod -R 766 /opt/lte-simulator/{config,data,logs}/
+        # Create required files as lteuser (the container already sets proper ownership)
+        # No need to change ownership of mounted volumes
+        touch /opt/lte-simulator/config/user_db.csv || true
+        touch /opt/lte-simulator/data/subscribers.csv || true
+        touch /opt/lte-simulator/logs/tui.log || true
         
-        # Create required files
-        touch /opt/lte-simulator/config/user_db.csv
-        touch /opt/lte-simulator/data/subscribers.csv
-        chown lteuser:lteuser /opt/lte-simulator/config/user_db.csv
-        chown lteuser:lteuser /opt/lte-simulator/data/subscribers.csv
-        chmod 666 /opt/lte-simulator/config/user_db.csv
-        chmod 666 /opt/lte-simulator/data/subscribers.csv
+        # Create CSV headers if files are empty
+        if [ ! -s /opt/lte-simulator/config/user_db.csv ]; then
+          echo 'imsi,key,opc,amf,sqn' > /opt/lte-simulator/config/user_db.csv
+        fi
         
-        # Switch to lteuser and start TUI
-        exec su - lteuser -c 'cd /opt/lte-simulator && python3 /opt/lte-simulator/tui/main.py'
+        if [ ! -s /opt/lte-simulator/data/subscribers.csv ]; then
+          echo 'imsi,ki,opc,amf,sqn,status,created_at,last_seen,operator,notes' > /opt/lte-simulator/data/subscribers.csv
+        fi
+        
+        # Start TUI as lteuser
+        exec python3 /opt/lte-simulator/tui/main.py
       "
+    user: lteuser  # Run as lteuser from the start
     
   # Optional: Web interface for remote management
   web-interface:
@@ -64,8 +64,8 @@ services:
     depends_on:
       - lte-simulator
     volumes:
-      - ./data:/opt/lte-simulator/data:ro
-      - ./logs:/opt/lte-simulator/logs:ro
+      - lte_data:/opt/lte-simulator/data:ro
+      - lte_logs:/opt/lte-simulator/logs:ro
     environment:
       - FLASK_ENV=production
     restart: unless-stopped
@@ -73,8 +73,10 @@ services:
       - web  # Only start if 'web' profile is specified
 
 volumes:
-  # Persistent volumes for data storage
+  # Persistent volumes for data storage with proper permissions
   lte_data:
     driver: local
   lte_logs:
+    driver: local
+  lte_config:
     driver: local

@@ -10,10 +10,10 @@ services:
     volumes:
       # Mount USB devices for SDR access
       - /dev/bus/usb:/dev/bus/usb
-      # Persistent storage for configurations and logs
-      - ./data:/opt/lte-simulator/data
-      - ./logs:/opt/lte-simulator/logs
-      - ./config:/opt/lte-simulator/config
+      # Persistent storage for configurations and logs with proper permissions
+      - ./data:/opt/lte-simulator/data:rw
+      - ./logs:/opt/lte-simulator/logs:rw
+      - ./config:/opt/lte-simulator/config:rw
     devices:
       # Mount all USB devices (for SDR detection)
       - /dev/bus/usb:/dev/bus/usb

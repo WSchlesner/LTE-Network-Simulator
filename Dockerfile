@@ -99,14 +99,24 @@ RUN cd /tmp && \
     ldconfig && \
     rm -rf /tmp/srsRAN_4G
 
-# Create application directories
-RUN mkdir -p /opt/lte-simulator/{config,data,logs,scripts,tui}
+# Download UHD images as root before switching users
+RUN /usr/local/lib/uhd/utils/uhd_images_downloader.py
+
+# Create non-root user for security BEFORE creating directories
+RUN useradd -m -s /bin/bash lteuser
+
+# Create application directories with proper ownership
+RUN mkdir -p /opt/lte-simulator/{config,data,logs,scripts,tui} && \
+    chown -R lteuser:lteuser /opt/lte-simulator
 
 # Copy application files
 COPY config/ /opt/lte-simulator/config/
 COPY scripts/ /opt/lte-simulator/scripts/
 COPY tui/ /opt/lte-simulator/tui/
 COPY data/ /opt/lte-simulator/data/
+
+# Fix ownership after copying files
+RUN chown -R lteuser:lteuser /opt/lte-simulator
 
 # Make scripts executable
 RUN chmod +x /opt/lte-simulator/scripts/*.sh
@@ -117,13 +127,6 @@ ENV PATH="/opt/lte-simulator/scripts:/opt/lte-simulator/tui:$PATH"
 ENV UHD_IMAGES_DIR="/usr/local/share/uhd/images"
 ENV LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH"
 ENV UHD_RFNOC_DIR="/usr/local/lib/uhd/rfnoc"
-
-# Download UHD images as root before switching users
-RUN /usr/local/lib/uhd/utils/uhd_images_downloader.py
-
-# Create non-root user for security
-RUN useradd -m -s /bin/bash lteuser && \
-    chown -R lteuser:lteuser /opt/lte-simulator
 
 # Switch to non-root user
 USER lteuser

@@ -581,4 +581,3 @@ enable = false
             "throughput_mbps": await self.get_throughput(),
             "config": self.current_config
         }
-                "

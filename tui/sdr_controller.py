@@ -527,12 +527,12 @@ class SDRController:
                 os.remove("/tmp/gain_test.bin")
             except:
                 pass
-                ######################
+            
             return True
             
         except Exception as e:
             logger.error(f"Gain control test failed: {e}")
-        return False
+            return False
 
     async def configure(self, config: Dict[str, Any]) -> bool:
         """
